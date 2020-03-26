@@ -9,10 +9,10 @@ def main():
 
     seed(3)
 
-     a = matrix_filler()
+    a = matrix_filler()
     b = matrix_filler()
 
-    subtract(a,b)
+    print(strassen(a,b, 2))
 
 #function to help testing - fills matrix with random integers from 1 to 5
 def matrix_filler():
@@ -49,10 +49,10 @@ def subtract(m1,m2, to_fill):
             #avoids having to allocate memory for a new matrix
             to_fill[i][j] = m1[i][j] - m2[i][j]
 
-def strassen(m1,m2,n_0):
+def strassen(m1,m2,n0):
 
     size = len(m1)
-    if size <= n_0:
+    if size <= n0:
         return (standard_mm(m1,m2))
 
     new_size = size/2
@@ -70,8 +70,8 @@ def strassen(m1,m2,n_0):
     g = [[0 for i in range(new_size)] for j in range(new_size)]
     h = [[0 for i in range(new_size)] for j in range(new_size)]
 
-     for i in range(new_size):
-         for j in range(new_size):
+    for i in range(new_size):
+        for j in range(new_size):
              a[i][j] = m1[i][j]
              b[i][j] = m1[i][j + new_size]
              c[i][j] = m1[i + new_size][j]
@@ -85,36 +85,56 @@ def strassen(m1,m2,n_0):
     buffer1 = [[0 for i in range(new_size)] for j in range(new_size)]
     buffer2 = [[0 for i in range(new_size)] for j in range(new_size)]
     subtract(f,h,buffer1)
-    p1 = strassen(a, buffer1)
+    p1 = strassen(a, buffer1, n0)
     add(a,b, buffer1)
-    p2 = strassen(buffer1, h)
+    p2 = strassen(buffer1, h, n0)
     add(c,d,buffer1)
-    p3 = strassen(buffer1, e)
+    p3 = strassen(buffer1, e, n0)
     subtract(g,e,buffer1)
-    p4 = strassen(d,buffer1)
+    p4 = strassen(d,buffer1, n0)
     add(a,d,buffer1)
     add(e,h,buffer2)
-    p5 = strassen(buffer1,buffer2)
+    p5 = strassen(buffer1,buffer2, n0)
     subtract(b,d,buffer1)
     add(g,h,buffer2)
-    p6 = strassen(buffer1,buffer2)
+    p6 = strassen(buffer1,buffer2, n0)
     subtract(a,c,buffer1)
     add(e,f,buffer2)
-    p7 = strassen(buffer1, buffer2)
-
-    # (s1) ae + bg = P5 + P4 − P2 + P6
-    # (s2) af + bh = P1 + P2
-    # (s3) ce + dg = P3 + P4
-    # (s4) cf + dh = P5 + P1 − P3 − P1
-
-    
+    p7 = strassen(buffer1, buffer2, n0)
 
 
+    #overwrite a,b,c,d becuase they are no longer being
 
+    #let s1 = a, s2 = b, s3 = c, s4 = c
 
+    # ae + bg = p5 + p4 - p2 + p6
+    add(p5, p4, a)
+    subtract(a,p2,a)
+    add(a,p6,a)
 
+    # af + bh = p1 + p2
+    add(p1,p2,b)
 
+    # ce + dg = p3 + p4
+    add(p3,p4,c)
 
+    # cf + dh = p5 + p1 - p3 - p7
+    add(p5,p1,d)
+    subtract(d,p3,d)
+    subtract(d,p7,d)
+
+    #s is the solution to m1 * m2
+
+    s = [[0 for i in range(size)] for j in range(size)]
+
+    for i in range(new_size):
+        for j in range(new_size):
+            s[i][j] = a[i][j]
+            s[i][j + new_size] = b[i][j]
+            s[i + new_size][j] = c[i][j]
+            s[i + new_size][j + new_size] = d[i][j]
+
+    return(s)
 
 
 main()
