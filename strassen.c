@@ -13,46 +13,121 @@ void random_matrix_filler(int ** m1, int size);
 void print_matrix(int ** m1, int size);
 void zero_filler(int ** m1, int size);
 void strassen(int ** m1, int ** m2, int ** m3, int size, int n0);
-
+void init_matrices(int ** m1, int ** m2, int ** m3, int size);
+void testCorrectness(int ** m1, int ** m2, int ** m3, int size);
+void test_n0_vals(int ** m1, int ** m2, int ** m3, int size);
+void standard_run(int ** m1, int ** m2, int ** m3, int size, int n0);
 
 int main(int argc, char * argv[])
 {
-    int n = atoi(argv[1]);
-    int n0;
+    int flag = atoi(argv[1]);
+    int size = atoi(argv[2]);
+    int ** m1,** m2,** m3;
+    const int n0 = 32;
+
+    sleep(1); //ensure new seed from last call
+    srand(time(0)); //get random seed
+
+    /*----------Allocate memory----------*/ 
+    m1 = matrix_memory_allocator(size);
+    m2 = matrix_memory_allocator(size);
+    m3 = matrix_memory_allocator(size);
+
+    /*----------Randomly fill matrices----------*/
+    random_matrix_filler(m1, size);
+    random_matrix_filler(m2, size);
+    zero_filler(m3, size); //all zeros for buffer to fill
+
+    switch(flag) {
+        case 1:
+            testCorrectness(m1, m2, m3, size);
+            break;
+        case 2:
+            test_n0_vals(m1, m2, m3, size);
+            break;
+        default:
+            standard_run(m1, m2, m3, size, n0);
+            break;
+    }
+
+    free_matrix(m1, size);
+    free_matrix(m2, size);
+    free_matrix(m3, size);
+
+}
+
+void init_matrices(int** m1, int ** m2, int ** m3, int size)
+{
+    sleep(1); //ensure new seed from last call
+    srand(time(0)); //get random seed
+
+    /*----------Allocate memory----------*/ 
+    m1 = matrix_memory_allocator(size);
+    m2 = matrix_memory_allocator(size);
+    m3 = matrix_memory_allocator(size);
+
+    /*----------Randomly fill matrices----------*/
+    random_matrix_filler(m1, size);
+    random_matrix_filler(m2, size);
+    zero_filler(m3, size); //all zeros for buffer to fill
+}    
+
+/*----------Test that strassen implementation works----------*/
+void testCorrectness(int ** m1, int ** m2, int ** m3, int size)
+{
+    int ** standard_comparison = matrix_memory_allocator(size);
+    standard_mm(m1, m2, standard_comparison, size);
+
+    int n0 = 2;
+    strassen(m1, m2, m3, size, n0);
+    
+    int is_equal = 1;
+    for(int i = 0; i < size; i++) {
+        for(int j = 0; j < size; j++) {
+            if(m3[i][j] != standard_comparison[i][j]) {
+                is_equal = 0;
+                break;
+            }
+        }
+    }
+
+    char * print = (is_equal == 1) ? "correct." : "not correct.";
+    printf("The strassen implementation is %s\n", print);
+
+    free_matrix(standard_comparison, size);
+}
+
+void test_n0_vals(int ** m1, int ** m2, int ** m3, int size)
+{
     double total_time;
-
-    for (int k = 1; k <= n; k = 2*k)
-    {
-        sleep(1);
+    int TRIALS = 5;
+    
+    for (int n0 = 1; n0 <= size; n0*=2) {
+        sleep(1); //ensure new seed
         srand(time(0));
-        n0 = k;
         total_time = 0;
-        for (int i = 0; i<5; i++)
-        {
+        for(int i = 0; i < TRIALS; i++) {
+            random_matrix_filler(m1, size);
+            random_matrix_filler(m2, size);
+            zero_filler(m3, size);
 
-            int ** a = matrix_memory_allocator(n);
-            int ** b = matrix_memory_allocator(n);
-            random_matrix_filler(a,n);
-            random_matrix_filler(b,n);
-            //print_matrix(a,n);
-            //print_matrix(b,n);
-            int ** c = matrix_memory_allocator(n);
-            zero_filler(c,n);
-
-            clock_t begin = clock();
-            strassen(a,b,c,n,n0);
-            //standard_mm(a,b,c,n);
-            //print_matrix(c,n);
+            clock_t start = clock();
+            strassen(m1, m2, m3, size, n0);
             clock_t end = clock();
-            double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-            total_time += time_spent;
+            total_time += (double)(end - start) / CLOCKS_PER_SEC;
+        }
+        printf("%f average time, n0 = %i \n", total_time / (double)5,n0);
+    }
+}
 
-            free_matrix(a,n);
-            free_matrix(b,n);
-            free_matrix(c,n);
-          }
-          printf("%f average time, n0 = %i \n", total_time / (double)5,n0);
-      }
+void standard_run(int ** m1, int ** m2, int ** m3, int size, int n0)
+{
+    clock_t start = clock();
+    strassen(m1, m2, m3, size, n0);
+    clock_t end = clock();
+
+    double time_elapsed = (double)(end - start) / CLOCKS_PER_SEC;
+    printf("Completed strassen's in %lf seconds\n", time_elapsed);
 }
 
 void strassen(int ** m1, int ** m2, int ** m3, int size, int n0)
@@ -136,7 +211,6 @@ void strassen(int ** m1, int ** m2, int ** m3, int size, int n0)
         add(p5, p4, a,new_size);
         subtract(a,p2,a,new_size);
         add(a,p6,a,new_size);
-
 
         //af + bh = p1 + p2
         add(p1,p2,b,new_size);
@@ -235,6 +309,7 @@ void subtract(int ** m1, int ** m2, int ** m3, int size)
 
 void standard_mm(int ** m1, int ** m2, int ** m3, int size)
 {
+    zero_filler(m3, size);
     for (int i = 0; i < size; i++)
     {
         for (int k = 0; k < size; k++)
