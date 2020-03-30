@@ -17,18 +17,20 @@ void init_matrices(int ** m1, int ** m2, int ** m3, int size);
 void testCorrectness(int ** m1, int ** m2, int ** m3, int size);
 void test_n0_vals(int ** m1, int ** m2, int ** m3, int size);
 void standard_run(int ** m1, int ** m2, int ** m3, int size, int n0);
+void specifc_n0(int ** m1, int ** m2, int ** m3, int size, int n0);
+void triagle_numbers(int ** m1, int ** m2, int ** m3, int size, double p);
 
 int main(int argc, char * argv[])
 {
     int flag = atoi(argv[1]);
     int size = atoi(argv[2]);
+    int n0 = atoi(argv[3]);
     int ** m1,** m2,** m3;
-    const int n0 = 32;
 
     sleep(1); //ensure new seed from last call
     srand(time(0)); //get random seed
 
-    /*----------Allocate memory----------*/ 
+    /*----------Allocate memory----------*/
     m1 = matrix_memory_allocator(size);
     m2 = matrix_memory_allocator(size);
     m3 = matrix_memory_allocator(size);
@@ -45,6 +47,18 @@ int main(int argc, char * argv[])
         case 2:
             test_n0_vals(m1, m2, m3, size);
             break;
+        case 3:
+            specifc_n0(m1,m2,m3,size,n0);
+            break;
+        case 4:
+            zero_filler(m1,size);
+            zero_filler(m2,size);
+            triagle_numbers(m1, m2, m3, size, 0.01);
+            triagle_numbers(m1, m2 ,m3, size, 0.02);
+            triagle_numbers(m1, m2 ,m3, size, 0.03);
+            triagle_numbers(m1, m2, m3, size, 0.04);
+            triagle_numbers(m1, m2, m3, size, 0.05);
+            break;
         default:
             standard_run(m1, m2, m3, size, n0);
             break;
@@ -59,9 +73,9 @@ int main(int argc, char * argv[])
 void init_matrices(int** m1, int ** m2, int ** m3, int size)
 {
     sleep(1); //ensure new seed from last call
-    srand(time(0)); //get random seed
+    srand(time(0)); //seed rng
 
-    /*----------Allocate memory----------*/ 
+    /*----------Allocate memory----------*/
     m1 = matrix_memory_allocator(size);
     m2 = matrix_memory_allocator(size);
     m3 = matrix_memory_allocator(size);
@@ -70,7 +84,7 @@ void init_matrices(int** m1, int ** m2, int ** m3, int size)
     random_matrix_filler(m1, size);
     random_matrix_filler(m2, size);
     zero_filler(m3, size); //all zeros for buffer to fill
-}    
+}
 
 /*----------Test that strassen implementation works----------*/
 void testCorrectness(int ** m1, int ** m2, int ** m3, int size)
@@ -80,7 +94,7 @@ void testCorrectness(int ** m1, int ** m2, int ** m3, int size)
 
     int n0 = 2;
     strassen(m1, m2, m3, size, n0);
-    
+
     int is_equal = 1;
     for(int i = 0; i < size; i++) {
         for(int j = 0; j < size; j++) {
@@ -94,14 +108,70 @@ void testCorrectness(int ** m1, int ** m2, int ** m3, int size)
     char * print = (is_equal == 1) ? "correct." : "not correct.";
     printf("The strassen implementation is %s\n", print);
 
+
     free_matrix(standard_comparison, size);
+}
+
+void specifc_n0(int ** m1, int ** m2, int ** m3, int size, int n0)
+{
+    double total_time = 0;
+    for(int i = 0; i < 5; i++)
+    {
+        random_matrix_filler(m1, size);
+        random_matrix_filler(m2, size);
+        zero_filler(m3, size);
+
+        clock_t start = clock();
+        strassen(m1, m2, m3, size, n0);
+        clock_t end = clock();
+        total_time += (double)(end - start) / CLOCKS_PER_SEC;
+      }
+    printf("%f average time, n0 = %i \n", total_time / (double)5,n0);
+}
+
+void triagle_numbers(int ** m1, int ** m2, int ** m3, int size, double p)
+{
+    float total_triangles = 0;
+    for (int k = 0; k < 20; k++)
+    {
+        int counter = 0;
+        for (int i = 1; i < size; i++)
+        {
+            for (int j = 0; j < i; j++)
+            {
+                double random = (double)rand() / (double)RAND_MAX;
+                if (random <= p)
+                {
+                    m1[i][j] = 1;
+                    m1[j][i] = 1;
+                }
+            }
+        }
+
+        standard_mm(m1,m1,m2,size); //?
+        standard_mm(m2,m1,m3,size);
+
+        for (int i = 0; i < size; i++)
+        {
+            counter += m3[i][i];
+        }
+
+        float number_of_triangles = (float)counter / (float)6;
+        total_triangles += number_of_triangles;
+        printf("p = %f, number of triangles = %f \n",p,number_of_triangles);
+        zero_filler(m1, size);
+        zero_filler(m2,size);
+        zero_filler(m3,size);
+    }
+    float average_triangles = total_triangles / (float)20;
+    printf("p = %f, average number of triangles = %f \n",p,average_triangles);
 }
 
 void test_n0_vals(int ** m1, int ** m2, int ** m3, int size)
 {
     double total_time;
     int TRIALS = 5;
-    
+
     for (int n0 = 1; n0 <= size; n0*=2) {
         sleep(1); //ensure new seed
         srand(time(0));
