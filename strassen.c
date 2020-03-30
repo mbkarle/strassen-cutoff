@@ -1,9 +1,10 @@
+/*----------Imports----------*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
 
-
+/*----------Function declarations----------*/
 int ** matrix_memory_allocator(int size);
 void free_matrix(int ** m, int size);
 void add(int ** m1, int ** m2, int ** m3, int size);
@@ -16,15 +17,26 @@ void strassen(int ** m1, int ** m2, int ** m3, int size, int n0);
 void init_matrices(int ** m1, int ** m2, int ** m3, int size);
 void testCorrectness(int ** m1, int ** m2, int ** m3, int size);
 void test_n0_vals(int ** m1, int ** m2, int ** m3, int size);
-void standard_run(int ** m1, int ** m2, int ** m3, int size, int n0);
-void specifc_n0(int ** m1, int ** m2, int ** m3, int size, int n0);
+double timed_run(int ** m1, int ** m2, int ** m3, int size, int n0);
+double multi_trial_run(int ** m1, int ** m2, int ** m3, int size, int n0, int trials);
 void triagle_numbers(int ** m1, int ** m2, int ** m3, int size, double p);
+int even(int n);
 
+
+/*----------Main----------*/
+/*
+ * Expect command line input in following format
+ * ./strassen flag dimension inputfile
+ */
+/*------------------------*/
 int main(int argc, char * argv[])
 {
+    /*----------Read Inputs----------*/
     int flag = atoi(argv[1]);
     int size = atoi(argv[2]);
     int n0 = atoi(argv[3]);
+
+    //instantiate the matrix buffers
     int ** m1,** m2,** m3;
 
     sleep(1); //ensure new seed from last call
@@ -40,17 +52,18 @@ int main(int argc, char * argv[])
     random_matrix_filler(m2, size);
     zero_filler(m3, size); //all zeros for buffer to fill
 
+    /*----------Run Tests depending on user flag----------*/
     switch(flag) {
-        case 1:
+        case 1: //test -> is strassen's still producing correct answer?
             testCorrectness(m1, m2, m3, size);
             break;
-        case 2:
+        case 2: //test -> what power of 2 n0 produces fastest times up to n0 = n
             test_n0_vals(m1, m2, m3, size);
             break;
-        case 3:
-            specifc_n0(m1,m2,m3,size,n0);
+        case 3: //test -> average time for multiple trials at same n0
+            multi_trial_run(m1,m2,m3,size,n0,5);
             break;
-        case 4:
+        case 4: //task 3 -> triangles!
             zero_filler(m1,size);
             zero_filler(m2,size);
             triagle_numbers(m1, m2, m3, size, 0.01);
@@ -59,34 +72,25 @@ int main(int argc, char * argv[])
             triagle_numbers(m1, m2, m3, size, 0.04);
             triagle_numbers(m1, m2, m3, size, 0.05);
             break;
-        default:
-            standard_run(m1, m2, m3, size, n0);
+        default: //0 or unknown flag -> perform a single timed run of strassens at some n0
+            printf("Completed strassen's in %lf seconds\n", timed_run(m1, m2, m3, size, n0));
             break;
     }
 
+    /*----------Free Allocated Memory----------*/
     free_matrix(m1, size);
     free_matrix(m2, size);
     free_matrix(m3, size);
 
 }
 
-void init_matrices(int** m1, int ** m2, int ** m3, int size)
-{
-    sleep(1); //ensure new seed from last call
-    srand(time(0)); //seed rng
-
-    /*----------Allocate memory----------*/
-    m1 = matrix_memory_allocator(size);
-    m2 = matrix_memory_allocator(size);
-    m3 = matrix_memory_allocator(size);
-
-    /*----------Randomly fill matrices----------*/
-    random_matrix_filler(m1, size);
-    random_matrix_filler(m2, size);
-    zero_filler(m3, size); //all zeros for buffer to fill
-}
-
 /*----------Test that strassen implementation works----------*/
+/*
+ * @params m1, m2 -> filled matrices to multiply
+ * m3 -> buffer to fill
+ * size -> dimension of all m1, m2, m3
+ */
+/*-----------------------------------------------------------*/
 void testCorrectness(int ** m1, int ** m2, int ** m3, int size)
 {
     int ** standard_comparison = matrix_memory_allocator(size);
@@ -112,23 +116,35 @@ void testCorrectness(int ** m1, int ** m2, int ** m3, int size)
     free_matrix(standard_comparison, size);
 }
 
-void specifc_n0(int ** m1, int ** m2, int ** m3, int size, int n0)
+/*----------Time Multiple Trials at n0----------*/
+/*
+ * special params:
+ * n0 -> a specific crossover point constant for all trials
+ * trials -> number of trials to time and average
+ */
+/*----------------------------------------------*/
+double multi_trial_run(int ** m1, int ** m2, int ** m3, int size, int n0, int trials)
 {
     double total_time = 0;
-    for(int i = 0; i < 5; i++)
+    for(int i = 0; i < trials; i++)
     {
         random_matrix_filler(m1, size);
         random_matrix_filler(m2, size);
         zero_filler(m3, size);
 
-        clock_t start = clock();
-        strassen(m1, m2, m3, size, n0);
-        clock_t end = clock();
-        total_time += (double)(end - start) / CLOCKS_PER_SEC;
+        total_time += timed_run(m1, m2, m3, size, n0);
       }
     printf("%f average time, n0 = %i \n", total_time / (double)5,n0);
+    double average = total_time / (double)trials;
+    return average;
 }
 
+/*----------Count Triangles in graph----------*/
+/*
+ * special params:
+ * p -> ?
+ */
+/*--------------------------------------------*/
 void triagle_numbers(int ** m1, int ** m2, int ** m3, int size, double p)
 {
     float total_triangles = 0;
@@ -167,6 +183,7 @@ void triagle_numbers(int ** m1, int ** m2, int ** m3, int size, double p)
     printf("p = %f, average number of triangles = %f \n",p,average_triangles);
 }
 
+/*----------Test n0 values up to matrix dimension----------*/
 void test_n0_vals(int ** m1, int ** m2, int ** m3, int size)
 {
     double total_time;
@@ -175,33 +192,28 @@ void test_n0_vals(int ** m1, int ** m2, int ** m3, int size)
     for (int n0 = 1; n0 <= size; n0*=2) {
         sleep(1); //ensure new seed
         srand(time(0));
-        total_time = 0;
-        for(int i = 0; i < TRIALS; i++) {
-            random_matrix_filler(m1, size);
-            random_matrix_filler(m2, size);
-            zero_filler(m3, size);
-
-            clock_t start = clock();
-            strassen(m1, m2, m3, size, n0);
-            clock_t end = clock();
-            total_time += (double)(end - start) / CLOCKS_PER_SEC;
-        }
-        printf("%f average time, n0 = %i \n", total_time / (double)5,n0);
+        double average_time = multi_trial_run(m1, m2, m3, size, n0, TRIALS);
+        printf("Cutoff: n0 = %i; Average time: %lf\n", n0, average_time);
     }
 }
 
-void standard_run(int ** m1, int ** m2, int ** m3, int size, int n0)
+/*----------Perform a single timed run of strassens at given n0----------*/
+double timed_run(int ** m1, int ** m2, int ** m3, int size, int n0)
 {
     clock_t start = clock();
     strassen(m1, m2, m3, size, n0);
     clock_t end = clock();
 
     double time_elapsed = (double)(end - start) / CLOCKS_PER_SEC;
-    printf("Completed strassen's in %lf seconds\n", time_elapsed);
+    return time_elapsed;
 }
 
+/*====================*/
+/*      Strassen      */
+/*====================*/
 void strassen(int ** m1, int ** m2, int ** m3, int size, int n0)
 {
+    size = even(size); //can assume matrix is properly padded, so should use even size
     if (size <= n0)
     {
         standard_mm(m1,m2,m3,size);
@@ -209,7 +221,9 @@ void strassen(int ** m1, int ** m2, int ** m3, int size, int n0)
     else
     {
         int new_size = size/2 ;
+        int padded_size = even(new_size);
 
+        /*----------Allocate space for all sub arrays----------*/
         int ** a = matrix_memory_allocator(new_size);
         int ** b = matrix_memory_allocator(new_size);
         int ** c = matrix_memory_allocator(new_size);
@@ -233,7 +247,7 @@ void strassen(int ** m1, int ** m2, int ** m3, int size, int n0)
         int ** p6 = matrix_memory_allocator(new_size);
         int ** p7 = matrix_memory_allocator(new_size);
 
-
+        //fill sub arrays using m1, m2 vals
         for (int i = 0; i < new_size; i++)
         {
             for (int j = 0; j < new_size; j++)
@@ -250,48 +264,46 @@ void strassen(int ** m1, int ** m2, int ** m3, int size, int n0)
             }
         }
 
-
-
-
-        int ** buffer1 = matrix_memory_allocator(new_size);
-        int ** buffer2 = matrix_memory_allocator(new_size);
-        subtract(f,h,buffer1,new_size);
-        strassen(a, buffer1, p1,new_size, n0);
-        add(a,b, buffer1,new_size);
-        strassen(buffer1, h, p2, new_size, n0);
-        add(c,d,buffer1,new_size);
-        strassen(buffer1, e, p3,new_size, n0);
-        subtract(g,e,buffer1,new_size);
-        strassen(d,buffer1, p4,new_size, n0);
-        add(a,d,buffer1,new_size);
-        add(e,h,buffer2,new_size);
-        strassen(buffer1,buffer2, p5,new_size,n0);
-        subtract(b,d,buffer1,new_size);
-        add(g,h,buffer2,new_size);
-        strassen(buffer1,buffer2,p6,new_size, n0);
-        subtract(a,c,buffer1,new_size);
-        add(e,f,buffer2,new_size);
-        strassen(buffer1, buffer2,p7,new_size, n0);
+        //two buffers to efficiently store temporary sum and difference matrices
+        int ** buffer1 = matrix_memory_allocator(padded_size);
+        int ** buffer2 = matrix_memory_allocator(padded_size);
+        subtract(f,h,buffer1,padded_size);
+        strassen(a, buffer1, p1,padded_size, n0);
+        add(a,b, buffer1,padded_size);
+        strassen(buffer1, h, p2, padded_size, n0);
+        add(c,d,buffer1,padded_size);
+        strassen(buffer1, e, p3,padded_size, n0);
+        subtract(g,e,buffer1,padded_size);
+        strassen(d,buffer1, p4,padded_size, n0);
+        add(a,d,buffer1,padded_size);
+        add(e,h,buffer2,padded_size);
+        strassen(buffer1,buffer2, p5,padded_size,n0);
+        subtract(b,d,buffer1,padded_size);
+        add(g,h,buffer2,padded_size);
+        strassen(buffer1,buffer2,p6,padded_size, n0);
+        subtract(a,c,buffer1,padded_size);
+        add(e,f,buffer2,padded_size);
+        strassen(buffer1, buffer2,p7,padded_size, n0);
 
         //overwrite a,b,c,d becuase they are no longer being
 
         //let s1 = a, s2 = b, s3 = c, s4 = c
 
         //ae + bg = p5 + p4 - p2 + p6
-        add(p5, p4, a,new_size);
-        subtract(a,p2,a,new_size);
-        add(a,p6,a,new_size);
+        add(p5, p4, a,padded_size);
+        subtract(a,p2,a,padded_size);
+        add(a,p6,a,padded_size);
 
         //af + bh = p1 + p2
-        add(p1,p2,b,new_size);
+        add(p1,p2,b,padded_size);
 
         //ce + dg = p3 + p4
-        add(p3,p4,c,new_size);
+        add(p3,p4,c,padded_size);
 
         //cf + dh = p5 + p1 - p3 - p7
-        add(p5,p1,d,new_size);
-        subtract(d,p3,d,new_size);
-        subtract(d,p7,d,new_size);
+        add(p5,p1,d,padded_size);
+        subtract(d,p3,d,padded_size);
+        subtract(d,p7,d,padded_size);
 
         //s is the solution to m1 * m2
 
@@ -306,55 +318,70 @@ void strassen(int ** m1, int ** m2, int ** m3, int size, int n0)
             }
         }
 
+        free_matrix(buffer1, padded_size);
+        free_matrix(buffer2, padded_size);
 
-        free_matrix(a,new_size);
-        free_matrix(b,new_size);
-        free_matrix(c,new_size);
-        free_matrix(d,new_size);
+        free_matrix(a,padded_size);
+        free_matrix(b,padded_size);
+        free_matrix(c,padded_size);
+        free_matrix(d,padded_size);
 
-        free_matrix(e,new_size);
-        free_matrix(f,new_size);
-        free_matrix(g,new_size);
-        free_matrix(h,new_size);
+        free_matrix(e,padded_size);
+        free_matrix(f,padded_size);
+        free_matrix(g,padded_size);
+        free_matrix(h,padded_size);
 
-        free_matrix(c1,new_size);
-        free_matrix(c2,new_size);
-        free_matrix(c3,new_size);
-        free_matrix(c4,new_size);
+        free_matrix(c1,padded_size);
+        free_matrix(c2,padded_size);
+        free_matrix(c3,padded_size);
+        free_matrix(c4,padded_size);
 
-        free_matrix(p1,new_size);
-        free_matrix(p2,new_size);
-        free_matrix(p3,new_size);
-        free_matrix(p4,new_size);
-        free_matrix(p5,new_size);
-        free_matrix(p6,new_size);
-        free_matrix(p7,new_size);
+        free_matrix(p1,padded_size);
+        free_matrix(p2,padded_size);
+        free_matrix(p3,padded_size);
+        free_matrix(p4,padded_size);
+        free_matrix(p5,padded_size);
+        free_matrix(p6,padded_size);
+        free_matrix(p7,padded_size);
 
     }
 }
 
+/*----------Allocate 2 dimensional size x size array----------*/
 int ** matrix_memory_allocator(int size)
 {
+    int dim = even(size);
+
     int ** m;
 
-    m = (int **) malloc(size * sizeof(int*));
-    for (int i = 0; i < size; i++)
+    m = (int **) malloc(dim * sizeof(int*));
+    for (int i = 0; i < dim; i++)
     {
-        m[i] = (int *)malloc(size * sizeof(int));
+        m[i] = (int *)malloc(dim * sizeof(int));
+        if(dim > size)
+            m[i][size] = 0; //padding should automatically be assigned 0
+    }
+    if(dim > size) {
+        for(int j = 0; j < dim; j++) {
+            m[size][j] = 0; //padding should automatically be assigned 0
+        }
     }
 
     return(m);
 }
 
+/*----------Free 2 dimensional size x size array m----------*/
 void free_matrix(int ** m, int size)
 {
-    for (int i = 0; i < size; i++)
+    int dim = even(size); //all allocated matrices are even so can assume should free dim
+    for (int i = 0; i < dim; i++)
     {
         free(m[i]);
     }
     free(m);
 }
 
+/*----------Add size x size matrices m1, m2 and store result in m3----------*/
 void add(int ** m1, int ** m2, int ** m3, int size)
 {
     for (int i = 0; i < size; i++)
@@ -366,6 +393,7 @@ void add(int ** m1, int ** m2, int ** m3, int size)
     }
 }
 
+/*----------Fill size x size matrix m3 = m1 - m2----------*/
 void subtract(int ** m1, int ** m2, int ** m3, int size)
 {
     for (int i = 0; i < size; i++)
@@ -377,6 +405,7 @@ void subtract(int ** m1, int ** m2, int ** m3, int size)
     }
 }
 
+/*----------Standard naive matrix multiplication----------*/
 void standard_mm(int ** m1, int ** m2, int ** m3, int size)
 {
     zero_filler(m3, size);
@@ -392,8 +421,10 @@ void standard_mm(int ** m1, int ** m2, int ** m3, int size)
     }
 }
 
+/*----------Fill size x size matrix m1 with random numbers----------*/
 void random_matrix_filler(int ** m1, int size)
 {
+    int padded_size = even(size);
     //generates random numbers -5 to 5 essentially
     int max_rand = 11;
     for (int i = 0; i < size; i++)
@@ -405,6 +436,7 @@ void random_matrix_filler(int ** m1, int size)
     }
 }
 
+/*----------Print size x size matrix m1----------*/
 void print_matrix(int ** m1, int size)
 {
     for (int i = 0; i < size; i ++)
@@ -418,6 +450,7 @@ void print_matrix(int ** m1, int size)
     printf("\n");
 }
 
+/*----------Fill size x size buffer m1 with zeros----------*/
 void zero_filler(int ** m1, int size)
 {
     for (int i = 0; i < size; i++)
@@ -429,4 +462,9 @@ void zero_filler(int ** m1, int size)
     }
 }
 
-//void strassen(int ** m1, int ** m2, int n0)
+//return next even if odd
+int even(int n)
+{
+    return (n % 2 == 0) ? n : n + 1;
+}
+//ye
