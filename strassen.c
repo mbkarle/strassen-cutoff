@@ -21,6 +21,8 @@ double timed_run(int ** m1, int ** m2, int ** m3, int size, int n0);
 double multi_trial_run(int ** m1, int ** m2, int ** m3, int size, int n0, int trials);
 void triagle_numbers(int ** m1, int ** m2, int ** m3, int size, double p);
 int even(int n);
+int loadInput(char * filename, int ** m1, int ** m2, int size);
+void print_result(int ** m, int size);
 
 
 /*----------Main----------*/
@@ -34,7 +36,8 @@ int main(int argc, char * argv[])
     /*----------Read Inputs----------*/
     int flag = atoi(argv[1]);
     int size = atoi(argv[2]);
-    int n0 = atoi(argv[3]);
+    char * filename = argv[3];
+    int n0 = 64; //empirically determined best
 
     //instantiate the matrix buffers
     int ** m1,** m2,** m3;
@@ -47,9 +50,11 @@ int main(int argc, char * argv[])
     m2 = matrix_memory_allocator(size);
     m3 = matrix_memory_allocator(size);
 
-    /*----------Randomly fill matrices----------*/
-    random_matrix_filler(m1, size);
-    random_matrix_filler(m2, size);
+    /*----------Fill matrices----------*/
+    if(loadInput(filename, m1, m2, size) == 0) { //attempt to load from input file, otherwise load randomly
+        random_matrix_filler(m1, size);
+        random_matrix_filler(m2, size);
+    }
     zero_filler(m3, size); //all zeros for buffer to fill
 
     /*----------Run Tests depending on user flag----------*/
@@ -73,7 +78,8 @@ int main(int argc, char * argv[])
             triagle_numbers(m1, m2, m3, size, 0.05);
             break;
         default: //0 or unknown flag -> perform a single timed run of strassens at some n0
-            printf("Completed strassen's in %lf seconds\n", timed_run(m1, m2, m3, size, n0));
+            strassen(m1, m2, m3, size, n0);
+            print_result(m3, size);
             break;
     }
 
@@ -83,6 +89,27 @@ int main(int argc, char * argv[])
     free_matrix(m3, size);
 
 }
+
+/*----------Load matrix elements into buffers----------*/
+int loadInput(char * filename, int ** m1, int ** m2, int size) {
+    FILE * fptr = NULL;
+    fptr = fopen(filename, "r");
+    if(fptr == NULL)
+        return 0; //no file given
+    for(int i = 0; i < size; i++) {
+        for(int j = 0; j < size; j++) {
+            fscanf(fptr, "%i", &m1[i][j]);
+        }
+    }
+    for(int i = 0; i < size; i++) {
+        for(int j = 0; j < size; j++) {
+            fscanf(fptr, "%i", &m2[i][j]);
+        }
+    }
+    fclose(fptr);
+    return 1; //valid file, inputs loaded
+}
+        
 
 /*----------Test that strassen implementation works----------*/
 /*
@@ -186,7 +213,6 @@ void triagle_numbers(int ** m1, int ** m2, int ** m3, int size, double p)
 /*----------Test n0 values up to matrix dimension----------*/
 void test_n0_vals(int ** m1, int ** m2, int ** m3, int size)
 {
-    double total_time;
     int TRIALS = 5;
 
     for (int n0 = 1; n0 <= size; n0*=2) {
@@ -424,7 +450,6 @@ void standard_mm(int ** m1, int ** m2, int ** m3, int size)
 /*----------Fill size x size matrix m1 with random numbers----------*/
 void random_matrix_filler(int ** m1, int size)
 {
-    int padded_size = even(size);
     //generates random numbers -5 to 5 essentially
     int max_rand = 11;
     for (int i = 0; i < size; i++)
@@ -466,5 +491,12 @@ void zero_filler(int ** m1, int size)
 int even(int n)
 {
     return (n % 2 == 0) ? n : n + 1;
+}
+
+//print only the diagonals of matrix for machine grader
+void print_result(int ** m, int size) {
+    for(int i = 0; i < size; i++) {
+        printf("%i\n", m[i][i]);
+    }
 }
 //ye
