@@ -175,7 +175,7 @@ double multi_trial_run(int ** m1, int ** m2, int ** m3, int size, int n0, int tr
 void triagle_numbers(int ** m1, int ** m2, int ** m3, int size, double p)
 {
     float total_triangles = 0;
-    for (int k = 0; k < 20; k++)
+    for (int k = 0; k < 200; k++)
     {
         int counter = 0;
         for (int i = 1; i < size; i++)
@@ -191,8 +191,8 @@ void triagle_numbers(int ** m1, int ** m2, int ** m3, int size, double p)
             }
         }
 
-        standard_mm(m1,m1,m2,size); //?
-        standard_mm(m2,m1,m3,size);
+        strassen(m1,m1,m2,size,64);//run strassen on inputs 
+        strassen(m2,m1,m3,size, 64);
 
         for (int i = 0; i < size; i++)
         {
@@ -206,7 +206,7 @@ void triagle_numbers(int ** m1, int ** m2, int ** m3, int size, double p)
         zero_filler(m2,size);
         zero_filler(m3,size);
     }
-    float average_triangles = total_triangles / (float)20;
+    float average_triangles = total_triangles / (float)200;
     printf("p = %f, average number of triangles = %f \n",p,average_triangles);
 }
 
