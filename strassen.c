@@ -161,7 +161,7 @@ double multi_trial_run(int ** m1, int ** m2, int ** m3, int size, int n0, int tr
 
         total_time += timed_run(m1, m2, m3, size, n0);
       }
-    printf("%f average time, n0 = %i \n", total_time / (double)trials,n0);
+    //printf("%f average time, n0 = %i \n", total_time / (double)trials,n0);
     double average = total_time / (double)trials;
     return average;
 }
@@ -213,14 +213,15 @@ void triagle_numbers(int ** m1, int ** m2, int ** m3, int size, double p)
 /*----------Test n0 values up to matrix dimension----------*/
 void test_n0_vals(int ** m1, int ** m2, int ** m3, int size)
 {
-    int TRIALS = 5;
+    int TRIALS = 1;
 
-    for (int n0 = 2; n0 <= size; n0*=2) {
-        sleep(1); //ensure new seed
-        srand(time(0));
+    for (int n0 = 32; n0 <= 256; n0++) {
+        //sleep(1); //ensure new seed
+        //srand(time(0));
         double average_time = multi_trial_run(m1, m2, m3, size, n0, TRIALS);
-        printf("Cutoff: n0 = %i; Average time: %lf\n", n0, average_time);
+        printf("%lf,", average_time);
     }
+    printf("\n");
 }
 
 /*----------Perform a single timed run of strassens at given n0----------*/
